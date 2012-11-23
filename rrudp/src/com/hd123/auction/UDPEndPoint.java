@@ -143,9 +143,9 @@ public class UDPEndPoint {
 					Destination peer=new Destination(dp.getAddress(), dp.getPort());
 					Segment seg = Segment.parse(dp.getData());
 					lastPacket=seg;
-					//handle connection handshake 
 					if(seg instanceof SYNSegment){
 						UDTSession session;
+						//服务器模式
 						if(serverSocketMode){
 							synchronized(lock){
 							session=sessions.get(peer);

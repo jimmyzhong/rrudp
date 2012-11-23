@@ -3,7 +3,6 @@ package com.hd123.auction;
 import java.net.InetAddress;
 import java.net.SocketException;
 import java.net.UnknownHostException;
-import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
 public class UDTServerSocket {

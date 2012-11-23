@@ -36,16 +36,16 @@ public class ServerSession extends UDTSession {
 			SYNSegment syn=(SYNSegment)packet;
 			logger.info("Received :"+syn);
 
-			if (getState()<=ready){
+			if (getState()<=READY){
 
-				if(getState()<=handshaking){
-					setState(handshaking);
+				if(getState()<=HANDSHARKING){
+					setState(HANDSHARKING);
 				}
 				try{
 					handleHandShake(syn);
 					n_handshake++;
 					try{
-						setState(ready);
+						setState(READY);
 						socket=new UDTSocket(endPoint, this);
 					}catch(Exception e){
 						logger.log(Level.SEVERE,"",e);
@@ -66,7 +66,7 @@ public class ServerSession extends UDTSession {
 //			return;
 //		}
 
-		if(getState()== ready) {
+		if(getState()== READY) {
 			active = true;
 
 //			if (packet instanceof KeepAlive) {

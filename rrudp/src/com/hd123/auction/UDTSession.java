@@ -4,7 +4,6 @@ import java.net.DatagramPacket;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import com.hd123.auction.seg.Segment;
@@ -16,27 +15,22 @@ public abstract class UDTSession {
 
 	protected int mode;
 	protected volatile boolean active;
-	private volatile int state=start;
+	private volatile int state=START;
 	protected volatile Segment lastPacket;
 	
-	//state constants	
-	public static final int start=0;
-	public static final int handshaking=1;
-	public static final int ready=2;
-	public static final int keepalive=3;
-	public static final int shutdown=4;
+	public static final int START=0;
+	public static final int HANDSHARKING=1;
+	public static final int READY=2;
+	public static final int KEEPLIVE=3;
+	public static final int SHUTDOWN=4;
 	
 	public static final int invalid=99;
 
 	protected volatile UDTSocket socket;
 	
-//	protected final UDTStatistics statistics;
-	
 	protected int receiveBufferSize=64*32768;
 	
 	protected int sequenceSize = 0xff;
-	
-//	protected final CongestionControl cc;
 	
 	public int getSequenceSize() {
 		return sequenceSize;
@@ -47,46 +41,21 @@ public abstract class UDTSession {
 		this.sequenceSize = sequenceSize;
 	}
 
-	//cache dgPacket (peer stays the same always)
 	private DatagramPacket dgPacket;
 
-	/**
-	 * flow window size, i.e. how many data packets are
-	 * in-flight at a single time
-	 */
 	protected int flowWindowSize=1024;
 
-	/**
-	 * remote UDT entity (address and socket ID)
-	 */
 	protected final Destination destination;
 	
-	/**
-	 * local port
-	 */
 	protected int localPort;
 	
 	
 	public static final int DEFAULT_DATAGRAM_SIZE=1024*4;
 	
-	/**
-	 * key for a system property defining the CC class to be used
-	 * @see CongestionControl
-	 */
-//	public static final String CC_CLASS="udt.congestioncontrol.class";
-	
-	/**
-	 * Buffer size (i.e. datagram size)
-	 * This is negotiated during connection setup
-	 */
 	protected int datagramSize=DEFAULT_DATAGRAM_SIZE;
 	
 	protected Long initialSequenceNumber=null;
 	
-	
-	private final static AtomicLong nextSocketID=new AtomicLong(20+new Random().nextInt(5000));
-	
-	private final AtomicInteger seqID = new AtomicInteger();
 	
 	public UDTSession(String description, Destination destination){
 		this.destination=destination;
@@ -96,11 +65,12 @@ public abstract class UDTSession {
 	
 	public abstract void received(Segment packet, Destination peer);
 	
-	private int receiverBufferSize = 10;
 	//获得接受缓存大小，这个值以后可以根据网络状态自动调整
+	private int receiverBufferSize = 10;
 	public int getReceiverBufferSize(){
 		return receiverBufferSize;
 	}
+	
 	public UDTSocket getSocket() {
 		return socket;
 	}
@@ -123,7 +93,7 @@ public abstract class UDTSession {
 	}
 	
 	public boolean isReady(){
-		return state==ready;
+		return state==READY;
 	}
 
 	public boolean isActive() {
@@ -135,7 +105,7 @@ public abstract class UDTSession {
 	}
 	
 	public boolean isShutdown(){
-		return state==shutdown || state==invalid;
+		return state==SHUTDOWN || state==invalid;
 	}
 	
 	public Destination getDestination() {

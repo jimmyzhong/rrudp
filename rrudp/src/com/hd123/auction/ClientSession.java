@@ -28,12 +28,12 @@ public class ClientSession extends UDTSession {
 
 	public void connect() throws InterruptedException,IOException{
 		int n=0;
-		while(getState()!=ready){
+		while(getState()!=READY){
 			//发送握手协议同步包
 			sendHandShake();
 			if(getState()==invalid)throw new IOException("Can't connect!");
 			n++;
-			if(getState()!=ready)Thread.sleep(500);
+			if(getState()!=READY)Thread.sleep(500);
 		}
 //		cc.init();
 		logger.info("Connected, "+n+" handshake packets sent");		
@@ -50,7 +50,7 @@ public class ClientSession extends UDTSession {
 
 			logger.info("Received connection handshake from "+peer+"\n"+syn);
 
-			if (getState()!=ready) {
+			if (getState()!=READY) {
 					try{
 						//TODO 验证目的地址是否是当前session的地址
 						//发送第二次同步包
@@ -63,7 +63,7 @@ public class ClientSession extends UDTSession {
 			}
 		}
 
-		if(getState() == ready) {
+		if(getState() == READY) {
 
 //			if(packet instanceof Shutdown){
 //				setState(shutdown);
