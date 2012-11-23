@@ -41,7 +41,6 @@ public class UDTReceiver {
 	//largest Ack number ever acknowledged by ACK2
 	private volatile long largestAcknowledgedAckNumber=-1;
 
-	//EXP event related
 
 	//a variable to record number of continuous EXP time-out events 
 	private volatile long expCount=0;
