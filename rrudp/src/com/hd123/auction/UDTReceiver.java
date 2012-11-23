@@ -44,11 +44,7 @@ public class UDTReceiver {
 
 	//a variable to record number of continuous EXP time-out events 
 	private volatile long expCount=0;
-
-	/*records the time interval between each probing pair
-    compute the median packet pair interval of the last
-	16 packet pair intervals (PI) and the estimate link capacity.(packet/s)*/
-//	private final PacketPairWindow packetPairWindow;
+//	private final PacketPairWindow  packetPairWindow;
 
 	//estimated link capacity
 	long estimateLinkCapacity;
