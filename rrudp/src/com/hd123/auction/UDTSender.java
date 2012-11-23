@@ -36,7 +36,7 @@ public class UDTSender {
 	private final Map<Integer,Segment> sendBuffer;
 	
 	//sendQueue contains the packets to send
-	private final BlockingQueue<Segment>sendQueue;
+	private final BlockingQueue<Segment> sendQueue;
 	
 	//thread reading packets from send queue and sending them
 	private Thread senderThread;
@@ -103,19 +103,15 @@ public class UDTSender {
 			public void run(){
 				try{
 					while(!stopped){
-						//wait until explicitely (re)started
-						startLatch.await();
-						paused=false;
-						senderAlgorithm();
+						senderAction();
 					}
 				}catch(InterruptedException ie){
 					ie.printStackTrace();
 				}
 				catch(IOException ex){
 					ex.printStackTrace();
-					logger.log(Level.SEVERE,"",ex);
+					logger.log(Level.SEVERE,"数据发送错误",ex);
 				}
-				logger.info("STOPPING SENDER for "+session);
 			}
 		};
 		senderThread=UDTThreadFactory.get().newThread(run);
@@ -158,6 +154,7 @@ public class UDTSender {
 			return;
 		boolean removed = false;
 		synchronized (sendLock) {
+			//移除发送缓存中的数据
 				removed=sendBuffer.remove(id)!=null;
 		}
 		if(removed){
@@ -165,9 +162,7 @@ public class UDTSender {
 		}
 	}
 
-
-	//send single keep alive packet -> move to socket!
-	protected void sendKeepAlive()throws Exception{
+	protected void sendKeepAlive() throws Exception{
 //		KeepAlive keepAlive = new KeepAlive();
 //		keepAlive.setSession(session);
 //		endpoint.doSend(keepAlive);
@@ -181,7 +176,7 @@ public class UDTSender {
 //		endpoint.doSend(ackOfAckPkt);
 	}
 
-	public void senderAlgorithm() throws InterruptedException, IOException{
+	public void senderAction() throws InterruptedException, IOException{
 		while(!paused){
 				//没有收到确认的数据包数量
 				int unAcknowledged=unacknowledged.get();

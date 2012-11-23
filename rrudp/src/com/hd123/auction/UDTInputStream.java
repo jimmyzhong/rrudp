@@ -9,25 +9,17 @@ import com.hd123.auction.util.ReceiveBuffer;
 
 public class UDTInputStream extends InputStream {
 
-	//the socket owning this inputstream
 	private final UDTSocket socket;
 
 	private final ReceiveBuffer receiveBuffer;
 
-	//set to 'false' by the receiver when it gets a shutdown signal from the peer
-	//see the noMoreData() method
 	private final AtomicBoolean expectMoreData=new AtomicBoolean(true);
 
 	private volatile boolean closed=false;
 
 	private volatile boolean blocking=true;
 
-	/**
-	 * create a new {@link UDTInputStream} connected to the given socket
-	 * @param socket - the {@link UDTSocket}
-	 * @throws IOException
-	 */
-	public UDTInputStream(UDTSocket socket)throws IOException{
+	public UDTInputStream(UDTSocket socket) throws IOException{
 		this.socket=socket;
 		int capacity=socket!=null? 2 * socket.getSession().getFlowWindowSize() : 128 ;
 		long initialSequenceNum=socket!=null?socket.getSession().getInitialSequenceNumber():1;

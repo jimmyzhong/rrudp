@@ -87,12 +87,14 @@ public class ClientSession extends UDTSession {
 	//handshake for connect
 	protected void sendHandShake()throws IOException{
 		SYNSegment syn = new SYNSegment(0);
+		syn.setSession(this);
 		endPoint.doSend(syn);
 	}
 
 	//2nd handshake for connect
 	protected void sendConfirmation(SYNSegment hs)throws IOException{
 		SYNSegment syn = new SYNSegment();
+		syn.setSession(this);
 		logger.info("Sending confirmation "+syn);
 		endPoint.doSend(syn);
 	}

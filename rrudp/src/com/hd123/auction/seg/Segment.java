@@ -1,6 +1,8 @@
 
 package com.hd123.auction.seg;
 
+import com.hd123.auction.UDTSession;
+
 public abstract class Segment
 {
     public static final int RUDP_VERSION = 1;
@@ -19,7 +21,11 @@ public abstract class Segment
     private int seqn; 
     private int ackn; 
 
-    protected Segment()
+    private UDTSession session;
+    
+   
+
+	protected Segment()
     {
         ackn = -1;
     }
@@ -134,7 +140,13 @@ public abstract class Segment
         ackn  = (buffer[off+3] & 0xFF);
     }
 
-   
+    public UDTSession getSession() {
+		return session;
+	}
+
+	public void setSession(UDTSession session) {
+		this.session = session;
+	}
 
     
     public String toString()

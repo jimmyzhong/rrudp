@@ -96,7 +96,11 @@ public abstract class UDTSession {
 	
 	public abstract void received(Segment packet, Destination peer);
 	
-	
+	private int receiverBufferSize = 10;
+	//获得接受缓存大小，这个值以后可以根据网络状态自动调整
+	public int getReceiverBufferSize(){
+		return receiverBufferSize;
+	}
 	public UDTSocket getSocket() {
 		return socket;
 	}

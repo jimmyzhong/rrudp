@@ -11,6 +11,7 @@ import java.util.logging.Logger;
 public class UDTClient {
 
 	private static final Logger logger=Logger.getLogger(UDTClient.class.getName());
+	
 	private final UDPEndPoint clientEndpoint;
 	private ClientSession clientSession;
 
@@ -46,47 +47,23 @@ public class UDTClient {
 		Thread.sleep(500);
 	}
 
-	/**
-	 * sends the given data asynchronously
-	 * 
-	 * @param data
-	 * @throws IOException
-	 * @throws InterruptedException
-	 */
-	public void send(byte[]data)throws IOException, InterruptedException{
-		clientSession.getSocket().doWrite(data);
-	}
-
-	public void sendBlocking(byte[]data)throws IOException, InterruptedException{
-		clientSession.getSocket().doWriteBlocking(data);
-	}
-
-	public int read(byte[]data)throws IOException, InterruptedException{
-		return clientSession.getSocket().getInputStream().read(data);
-	}
-
-	public void flush()throws IOException, InterruptedException{
-		clientSession.getSocket().flush();
-	}
-
-
 	public void shutdown() throws IOException{
 
-		if (clientSession.isReady()&& clientSession.active==true) 
-		{
-			Shutdown shutdown = new Shutdown();
-			shutdown.setDestinationID(clientSession.getDestination().getSocketID());
-			shutdown.setSession(clientSession);
-			try{
-				clientEndpoint.doSend(shutdown);
-			}
-			catch(IOException e)
-			{
-				logger.log(Level.SEVERE,"ERROR: Connection could not be stopped!",e);
-			}
+//		if (clientSession.isReady()&& clientSession.active==true) 
+//		{
+//			Shutdown shutdown = new Shutdown();
+//			shutdown.setDestinationID(clientSession.getDestination().getSocketID());
+//			shutdown.setSession(clientSession);
+//			try{
+//				clientEndpoint.doSend(shutdown);
+//			}
+//			catch(IOException e)
+//			{
+//				logger.log(Level.SEVERE,"ERROR: Connection could not be stopped!",e);
+//			}
 			clientSession.getSocket().getReceiver().stop();
 			clientEndpoint.stop();
-		}
+//		}
 	}
 
 	public UDTInputStream getInputStream()throws IOException{

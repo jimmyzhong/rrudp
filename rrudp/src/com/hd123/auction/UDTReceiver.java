@@ -9,11 +9,8 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import com.hd123.auction.receiver.ReceiverLossList;
+import com.hd123.auction.util.UDTThreadFactory;
 
-/**
- * receiver part of a UDT entity
- * @see UDTSender
- */
 public class UDTReceiver {
 
 	private static final Logger logger=Logger.getLogger(UDTReceiver.class.getName());
@@ -22,9 +19,6 @@ public class UDTReceiver {
 
 	private final UDTSession session;
 
-//	private final UDTStatistics statistics;
-
-	//record seqNo of detected lostdata and latest feedback time
 	private final ReceiverLossList receiverLossList;
 
 	//record each sent ACK and the sent time 
@@ -89,7 +83,7 @@ public class UDTReceiver {
 	private final long bufferSize;
 
 	//stores received packets to be sent
-	private final BlockingQueue<UDTPacket>handoffQueue;
+	private final BlockingQueue<UDTPacket> handoffQueue;
 
 	private Thread receiverThread;
 
@@ -106,16 +100,12 @@ public class UDTReceiver {
 
 	private final boolean storeStatistics;
 	
-	/**
-	 * create a receiver with a valid {@link UDTSession}
-	 * @param session
-	 */
 	public UDTReceiver(UDTSession session,UDPEndPoint endpoint){
 		this.endpoint = endpoint;
 		this.session=session;
 		this.sessionUpSince=System.currentTimeMillis();
-		this.statistics=session.getStatistics();
-		if(!session.isReady())throw new IllegalStateException("UDTSession is not ready.");
+		if(!session.isReady())
+			throw new IllegalStateException("UDPSession is not ready.");
 		ackHistoryWindow = new AckHistoryWindow(16);
 		packetHistoryWindow = new PacketHistoryWindow(16);
 		receiverLossList = new ReceiverLossList();
@@ -128,21 +118,6 @@ public class UDTReceiver {
 		start();
 	}
 	
-	private MeanValue dgReceiveInterval;
-	private MeanValue dataPacketInterval;
-	private MeanValue processTime;
-	private MeanValue dataProcessTime;
-	private void initMetrics(){
-		if(!storeStatistics)return;
-		dgReceiveInterval=new MeanValue("UDT receive interval");
-		statistics.addMetric(dgReceiveInterval);
-		dataPacketInterval=new MeanValue("Data packet interval");
-		statistics.addMetric(dataPacketInterval);
-		processTime=new MeanValue("UDT packet process time");
-		statistics.addMetric(processTime);
-		dataProcessTime=new MeanValue("Data packet process time");
-		statistics.addMetric(dataProcessTime);
-	}
 
 
 	//starts the sender algorithm
@@ -150,16 +125,12 @@ public class UDTReceiver {
 		Runnable r=new Runnable(){
 			public void run(){
 				try{
-					nextACK=Util.getCurrentTime()+ackTimerInterval;
-					nextNAK=(long)(Util.getCurrentTime()+1.5*nakTimerInterval);
-					nextEXP=Util.getCurrentTime()+2*expTimerInterval;
-					ackInterval=session.getCongestionControl().getAckInterval();
 					while(!stopped){
 						receiverAlgorithm();
 					}
 				}
 				catch(Exception ex){
-					logger.log(Level.SEVERE,"",ex);
+					logger.log(Level.SEVERE,"接受线程错误",ex);
 				}
 				logger.info("STOPPING RECEIVER for "+session);
 			}
@@ -184,21 +155,6 @@ public class UDTReceiver {
 	public void receiverAlgorithm()throws InterruptedException,IOException{
 		//check ACK timer
 		long currentTime=Util.getCurrentTime();
-		if(nextACK<currentTime){
-			nextACK=currentTime+ackTimerInterval;
-			processACKEvent(true);
-		}
-		//check NAK timer
-		if(nextNAK<currentTime){
-			nextNAK=currentTime+nakTimerInterval;
-			processNAKEvent();
-		}
-
-		//check EXP timer
-		if(nextEXP<currentTime){
-			nextEXP=currentTime+expTimerInterval;
-			processEXPEvent();
-		}
 		//perform time-bounded UDP receive
 		UDTPacket packet=handoffQueue.poll(Util.getSYNTime(), TimeUnit.MICROSECONDS);
 		if(packet!=null){
@@ -225,80 +181,6 @@ public class UDTReceiver {
 		}
 		
 		Thread.yield();
-	}
-
-	/**
-	 * process ACK event (see spec. p 12)
-	 */
-	protected void processACKEvent(boolean isTriggeredByTimer)throws IOException{
-		//(1).Find the sequence number *prior to which* all the packets have been received
-		final long ackNumber;
-		ReceiverLossListEntry entry=receiverLossList.getFirstEntry();
-		if (entry==null) {
-			ackNumber = largestReceivedSeqNumber + 1;
-		} else {
-			ackNumber = entry.getSequenceNumber();
-		}
-		//(2).a) if ackNumber equals to the largest sequence number ever acknowledged by ACK2
-		if (ackNumber == largestAcknowledgedAckNumber){
-			//do not send this ACK
-			return;
-		}else if (ackNumber==lastAckNumber) {
-			//or it is equals to the ackNumber in the last ACK  
-			//and the time interval between these two ACK packets
-			//is less than 2 RTTs,do not send(stop)
-			long timeOfLastSentAck=ackHistoryWindow.getTime(lastAckNumber);
-			if(Util.getCurrentTime()-timeOfLastSentAck< 2*roundTripTime){
-				return;
-			}
-		}
-		final long ackSeqNumber;
-		//if this ACK is not triggered by ACK timers,send out a light Ack and stop.
-		if(!isTriggeredByTimer){
-			ackSeqNumber=sendLightAcknowledgment(ackNumber);
-			return;
-		}
-		else{
-			//pack the packet speed and link capacity into the ACK packet and send it out.
-			//(7).records  the ACK number,ackseqNumber and the departure time of
-			//this Ack in the ACK History Window
-			ackSeqNumber=sendAcknowledgment(ackNumber);
-		}
-		AckHistoryEntry sentAckNumber= new AckHistoryEntry(ackSeqNumber,ackNumber,Util.getCurrentTime());
-		ackHistoryWindow.add(sentAckNumber);
-		//store ack number for next iteration
-		lastAckNumber=ackNumber;
-	}
-
-	/**
-	 * process NAK event (see spec. p 13)
-	 */
-	protected void processNAKEvent()throws IOException{
-		//find out all sequence numbers whose last feedback time larger than is k*RTT
-		List<Long>seqNumbers=receiverLossList.getFilteredSequenceNumbers(roundTripTime,true);
-		sendNAK(seqNumbers);
-	}
-
-	/**
-	 * process EXP event (see spec. p 13)
-	 */
-	protected void processEXPEvent()throws IOException{
-		if(session.getSocket()==null)return;
-		UDTSender sender=session.getSocket().getSender();
-		//put all the unacknowledged packets in the senders loss list
-		sender.putUnacknowledgedPacketsIntoLossList();
-		if(expCount>16 && System.currentTimeMillis()-sessionUpSince > IDLE_TIMEOUT){
-			if(!connectionExpiryDisabled &&!stopped){
-				sendShutdown();
-				stop();
-				logger.info("Session "+session+" expired.");
-				return;
-			}
-		}
-		if(!sender.haveLostPackets()){
-			sendKeepAlive();
-		}
-		expCount++;
 	}
 
 	protected void processUDTPacket(UDTPacket p)throws IOException{
