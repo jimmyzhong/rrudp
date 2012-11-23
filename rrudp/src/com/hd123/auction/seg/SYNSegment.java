@@ -34,10 +34,10 @@ public class SYNSegment extends Segment {
 	private int maxOutSeqSize;
 	private int maxAutoReset;
 
-	protected SYNSegment() {
+	public SYNSegment() {
 	}
 
-	protected SYNSegment(int seqn) {
+	public SYNSegment(int seqn) {
 		this(seqn, MAX_SEG_NUM, OPT_FLAG, MAX_SEG_SIZE, RE_TRANS_TIMEOUT,
 				ACC_TIMEOUT, NULL_TIMEOUT, STATE_TIMEOUT, MAX_RE_TRANSTIMES,
 				MAX_ACK_NUM, MAX_OUT_SEQ_SIZE, MAX_AUTO_RESET);
