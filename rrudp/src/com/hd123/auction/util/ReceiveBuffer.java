@@ -4,7 +4,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
-import com.hd123.auction.UDTInputStream.AppData;
+import com.hd123.auction.UDPInputStream.AppData;
 
 public class ReceiveBuffer {
 
@@ -43,7 +43,7 @@ public class ReceiveBuffer {
 			int seq = data.getSequenceNumber();
 			int index = (seq - startSequenceNumber + readPosition) % size;
 			if (buffer[index] != null)
-				return true;
+				return false;
 			buffer[index] = data;
 			numValidChunks.incrementAndGet();
 			emptyCondition.signal();

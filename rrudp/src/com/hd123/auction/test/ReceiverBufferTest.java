@@ -5,7 +5,7 @@ import java.util.List;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import com.hd123.auction.UDTInputStream.AppData;
+import com.hd123.auction.UDPInputStream.AppData;
 import com.hd123.auction.util.ReceiveBuffer;
 
 public class ReceiverBufferTest {

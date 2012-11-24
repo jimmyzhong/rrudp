@@ -2,19 +2,12 @@ package com.hd123.auction.receiver;
 
 import com.hd123.auction.util.Util;
 
-/**
- * an entry in the {@link ReceiverLossList}
- */
 public class ReceiverLossListEntry implements Comparable<ReceiverLossListEntry> {
 
 	private final long sequenceNumber;
 	private	long lastFeedbacktime;
 	private long k = 2;
 
-	/**
-	 * constructor
-	 * @param sequenceNumber
-	 */
 	public ReceiverLossListEntry(long sequenceNumber){
 		if(sequenceNumber<=0){
 			throw new IllegalArgumentException("Got sequence number "+sequenceNumber);
@@ -36,10 +29,6 @@ public class ReceiverLossListEntry implements Comparable<ReceiverLossListEntry> 
 		return sequenceNumber;
 	}
 
-	/**
-	 * k is initialised as 2 and increased by 1 each time the number is fed back
-	 * @return k the number of times that this seqNo has been feedback in NAK
-	 */
 	public long getK() {
 		return k;
 	}
@@ -48,9 +37,6 @@ public class ReceiverLossListEntry implements Comparable<ReceiverLossListEntry> 
 		return lastFeedbacktime;
 	}
 	
-	/**
-	 * order by increasing sequence number
-	 */
 	public int compareTo(ReceiverLossListEntry o) {
 		return (int)(sequenceNumber-o.sequenceNumber);
 	}

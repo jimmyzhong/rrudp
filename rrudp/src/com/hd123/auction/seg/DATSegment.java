@@ -5,7 +5,9 @@ public class DATSegment extends Segment
 {
     private byte[] data;
     
-    protected DATSegment()
+   
+
+	public DATSegment()
     {
     }
 
@@ -34,6 +36,10 @@ public class DATSegment extends Segment
         return data;
     }
 
+    public void setData(byte[] data) {
+		this.data = data;
+	}
+    
     @Override
     public byte[] getBytes()
     {

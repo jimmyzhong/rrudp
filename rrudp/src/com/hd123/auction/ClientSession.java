@@ -10,11 +10,7 @@ import com.hd123.auction.seg.SYNSegment;
 import com.hd123.auction.seg.Segment;
 
 
-/**
- * Client side of a client-server UDT connection. 
- * Once established, the session provides a valid {@link UDTSocket}.
- */
-public class ClientSession extends UDTSession {
+public class ClientSession extends UDPSession {
 
 	private static final Logger logger=Logger.getLogger(ClientSession.class.getName());
 

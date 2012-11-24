@@ -1,7 +1,7 @@
 
 package com.hd123.auction.seg;
 
-import com.hd123.auction.UDTSession;
+import com.hd123.auction.UDPSession;
 
 public abstract class Segment
 {
@@ -21,7 +21,7 @@ public abstract class Segment
     private int seqn; 
     private int ackn; 
 
-    private UDTSession session;
+    private UDPSession session;
     
    
 
@@ -140,11 +140,11 @@ public abstract class Segment
         ackn  = (buffer[off+3] & 0xFF);
     }
 
-    public UDTSession getSession() {
+    public UDPSession getSession() {
 		return session;
 	}
 
-	public void setSession(UDTSession session) {
+	public void setSession(UDPSession session) {
 		this.session = session;
 	}
 

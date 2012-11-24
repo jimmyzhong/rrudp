@@ -11,7 +11,7 @@ import com.hd123.auction.seg.SYNSegment;
 import com.hd123.auction.seg.Segment;
 
 
-public class ServerSession extends UDTSession {
+public class ServerSession extends UDPSession {
 
 	private static final Logger logger=Logger.getLogger(ServerSession.class.getName());
 
@@ -46,7 +46,7 @@ public class ServerSession extends UDTSession {
 					n_handshake++;
 					try{
 						setState(READY);
-						socket=new UDTSocket(endPoint, this);
+						socket=new UDPSocket(endPoint, this);
 					}catch(Exception e){
 						logger.log(Level.SEVERE,"",e);
 						setState(invalid);

@@ -22,7 +22,7 @@ import com.hd123.auction.util.UDTThreadFactory;
 
 /**
  * the UDPEndpoint takes care of sending and receiving UDP network packets,
- * dispatching them to the correct {@link UDTSession}
+ * dispatching them to the correct {@link UDPSession}
  */
 public class UDPEndPoint {
 
@@ -33,15 +33,17 @@ public class UDPEndPoint {
 	private final DatagramSocket dgSocket;
 
 	//以IP地址和端口号作为key
-	private final Map<Destination,UDTSession>sessions=new ConcurrentHashMap<Destination, UDTSession>();
+	private final Map<Destination,UDPSession>sessions=new ConcurrentHashMap<Destination, UDPSession>();
 
+	private  UDPSession clientSession;
+	
 	//last received packet
 	private Segment lastPacket;
 	private Destination lastDestination;
 
 	//if the endpoint is configured for a server socket,
 	//this queue is used to handoff new UDTSessions to the application
-	private final SynchronousQueue<UDTSession> sessionHandoff=new SynchronousQueue<UDTSession>();
+	private final SynchronousQueue<UDPSession> sessionHandoff=new SynchronousQueue<UDPSession>();
 	
 	private boolean serverSocketMode=false;
 
@@ -112,26 +114,26 @@ public class UDPEndPoint {
 		dgSocket.close();
 	}
 	
-	public void addSession(Destination destinationID,UDTSession session){
+	public void addSession(Destination destinationID,UDPSession session){
 		logger.info("Storing session <"+destinationID+">");
 		sessions.put(destinationID, session);
 	}
 
-	public Collection<UDTSession> getSessions(){
+	public Collection<UDPSession> getSessions(){
 		return sessions.values();
 	}
 
-	protected UDTSession accept() throws InterruptedException{
+	protected UDPSession accept() throws InterruptedException{
 		return sessionHandoff.take();
 	}
 	
-	protected UDTSession accept(long timeout, TimeUnit unit)throws InterruptedException{
+	protected UDPSession accept(long timeout, TimeUnit unit)throws InterruptedException{
 		return sessionHandoff.poll(timeout, unit);
 	}
 
 	final DatagramPacket dp= new DatagramPacket(new byte[DATAGRAM_SIZE],DATAGRAM_SIZE);
 	
-	private UDTSession lastSession;
+	private UDPSession lastSession;
 	
 	private final Object lock=new Object();
 	
@@ -144,7 +146,7 @@ public class UDPEndPoint {
 					Segment seg = Segment.parse(dp.getData());
 					lastPacket=seg;
 					if(seg instanceof SYNSegment){
-						UDTSession session;
+						UDPSession session;
 						//服务器模式
 						if(serverSocketMode){
 							synchronized(lock){
@@ -152,7 +154,6 @@ public class UDPEndPoint {
 							if(session==null){
 								session=new ServerSession(dp,this);
 								addSession(peer,session);
-								//TODO need to check peer to avoid duplicate server session
 									logger.fine("Pooling new request.");
 									sessionHandoff.put(session);
 									logger.fine("Request taken for processing.");
@@ -167,7 +168,7 @@ public class UDPEndPoint {
 						session.received(seg,peer);
 					}
 					else{
-						UDTSession session;
+						UDPSession session;
 						if(peer.equals(lastDestination)){
 							session=lastSession;
 						}

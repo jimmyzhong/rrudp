@@ -18,13 +18,13 @@ import com.hd123.auction.util.SequenceNumber;
 import com.hd123.auction.util.UDTThreadFactory;
 
 
-public class UDTSender {
+public class UDPSender {
 
-	private static final Logger logger=Logger.getLogger(UDTSender.class.getName());
+	private static final Logger logger=Logger.getLogger(UDPSender.class.getName());
 
 	private final UDPEndPoint endpoint;
 
-	private final UDTSession session;
+	private final UDPSession session;
 
 //	private final UDTStatistics statistics;
 
@@ -71,9 +71,7 @@ public class UDTSender {
 	//used by the sender to wait for an ACK of a certain sequence number
 	private final AtomicReference<CountDownLatch> waitForSeqAckLatch=new AtomicReference<CountDownLatch>();
 
-	private final boolean storeStatistics;
-
-	public UDTSender(UDTSession session,UDPEndPoint endpoint){
+	public UDPSender(UDPSession session,UDPEndPoint endpoint){
 		if(!session.isReady())
 			throw new IllegalStateException("UDPSession is not ready.");
 		this.endpoint= endpoint;
@@ -84,7 +82,6 @@ public class UDTSender {
 		currentSequenceNumber=-1;
 		waitForAckLatch.set(new CountDownLatch(1));
 		waitForSeqAckLatch.set(new CountDownLatch(1));
-		storeStatistics=Boolean.getBoolean("udt.sender.storeStatistics");
 		doStart();
 	}
 
@@ -127,10 +124,10 @@ public class UDTSender {
 		}
 	}
 
-	protected boolean sendUdtPacket(Segment p, int timeout, TimeUnit units)throws IOException,InterruptedException{
+	protected boolean sendUDPPacket(Segment p)throws IOException,InterruptedException{
 		if(!started)
 			start();
-		return sendQueue.offer(p,timeout,units);
+		return sendQueue.offer(p);
 	}
 
 	//用于调节发送速度

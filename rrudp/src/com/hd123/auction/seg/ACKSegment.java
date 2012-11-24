@@ -2,7 +2,7 @@ package com.hd123.auction.seg;
 
 public class ACKSegment extends Segment
 {
-    protected ACKSegment()
+	public ACKSegment()
     {
     }
 

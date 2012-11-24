@@ -9,9 +9,9 @@ import java.util.logging.Logger;
 import com.hd123.auction.seg.Segment;
 
 
-public abstract class UDTSession {
+public abstract class UDPSession {
 
-	private static final Logger logger=Logger.getLogger(UDTSession.class.getName());
+	private static final Logger logger=Logger.getLogger(UDPSession.class.getName());
 
 	protected int mode;
 	protected volatile boolean active;
@@ -26,7 +26,7 @@ public abstract class UDTSession {
 	
 	public static final int invalid=99;
 
-	protected volatile UDTSocket socket;
+	protected volatile UDPSocket socket;
 	
 	protected int receiveBufferSize=64*32768;
 	
@@ -54,10 +54,10 @@ public abstract class UDTSession {
 	
 	protected int datagramSize=DEFAULT_DATAGRAM_SIZE;
 	
-	protected Long initialSequenceNumber=null;
+	protected int initialSequenceNumber;
 	
 	
-	public UDTSession(String description, Destination destination){
+	public UDPSession(String description, Destination destination){
 		this.destination=destination;
 		this.dgPacket=new DatagramPacket(new byte[0],0,destination.getAddress(),destination.getPort());
 	}
@@ -71,7 +71,7 @@ public abstract class UDTSession {
 		return receiverBufferSize;
 	}
 	
-	public UDTSocket getSocket() {
+	public UDPSocket getSocket() {
 		return socket;
 	}
 
@@ -83,7 +83,7 @@ public abstract class UDTSession {
 		this.mode = mode;
 	}
 
-	public void setSocket(UDTSocket socket) {
+	public void setSocket(UDPSocket socket) {
 		this.socket = socket;
 	}
 
@@ -136,14 +136,11 @@ public abstract class UDTSession {
 		this.flowWindowSize = flowWindowSize;
 	}
 
-	public synchronized long getInitialSequenceNumber(){
-		if(initialSequenceNumber==null){
-			initialSequenceNumber=1l; //TODO must be random?
-		}
+	public synchronized int getInitialSequenceNumber(){
 		return initialSequenceNumber;
 	}
 	
-	public synchronized void setInitialSequenceNumber(long initialSequenceNumber){
+	public synchronized void setInitialSequenceNumber(int initialSequenceNumber){
 		this.initialSequenceNumber=initialSequenceNumber;
 	}
 
