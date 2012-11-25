@@ -17,7 +17,7 @@ public class UDPReceiver {
 
 	private static final Logger logger=Logger.getLogger(UDPReceiver.class.getName());
 
-	private final UDPEndPoint endpoint;
+	private final ServerSocketImpl endpoint;
 
 	private final UDPSession session;
 
@@ -77,16 +77,8 @@ public class UDPReceiver {
 
 	private volatile boolean stopped=false;
 
-	//(optional) ack interval (see CongestionControl interface)
-	private volatile long ackInterval=-1;
 
-	/**
-	 * if set to true connections will not expire, but will only be
-	 * closed by a Shutdown message
-	 */
-	public static boolean connectionExpiryDisabled=false;
-
-	public UDPReceiver(UDPSession session,UDPEndPoint endpoint){
+	public UDPReceiver(UDPSession session,ServerSocketImpl endpoint){
 		this.endpoint = endpoint;
 		this.session=session;
 		this.sessionUpSince=System.currentTimeMillis();

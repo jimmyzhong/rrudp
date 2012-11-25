@@ -8,7 +8,7 @@ import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.security.MessageDigest;
 
-import com.hd123.auction.UDPEndPoint;
+import com.hd123.auction.ServerSocketImpl;
 
 
 public class Util {
@@ -116,7 +116,7 @@ public class Util {
 	 * @return the local port that can now be accessed by the client
 	 * @throws IOException
 	 */
-	public static void doHolePunch(UDPEndPoint endpoint,InetAddress client, int clientPort)throws IOException{
+	public static void doHolePunch(ServerSocketImpl endpoint,InetAddress client, int clientPort)throws IOException{
 		DatagramPacket p=new DatagramPacket(new byte[1],1);
 		p.setAddress(client);
 		p.setPort(clientPort);

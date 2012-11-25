@@ -22,17 +22,10 @@ public class UDPSender {
 
 	private static final Logger logger=Logger.getLogger(UDPSender.class.getName());
 
-	private final UDPEndPoint endpoint;
+	private final ServerSocketImpl endpoint;
 
 	private final UDPSession session;
 
-//	private final UDTStatistics statistics;
-
-	//senderLossList stores the sequence numbers of lost packets
-	//fed back by the receiver through NAK pakets
-//	private final SenderLossList senderLossList;
-	
-	//sendBuffer stores the sent data packets and their sequence numbers
 	private final Map<Integer,Segment> sendBuffer;
 	
 	//sendQueue contains the packets to send
@@ -71,7 +64,7 @@ public class UDPSender {
 	//used by the sender to wait for an ACK of a certain sequence number
 	private final AtomicReference<CountDownLatch> waitForSeqAckLatch=new AtomicReference<CountDownLatch>();
 
-	public UDPSender(UDPSession session,UDPEndPoint endpoint){
+	public UDPSender(UDPSession session,ServerSocketImpl endpoint){
 		if(!session.isReady())
 			throw new IllegalStateException("UDPSession is not ready.");
 		this.endpoint= endpoint;

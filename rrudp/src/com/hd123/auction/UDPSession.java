@@ -1,6 +1,8 @@
 package com.hd123.auction;
 
+import java.io.IOException;
 import java.net.DatagramPacket;
+import java.net.UnknownHostException;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -24,7 +26,7 @@ public abstract class UDPSession {
 	public static final int KEEPLIVE=3;
 	public static final int SHUTDOWN=4;
 	
-	public static final int invalid=99;
+	public static final int INVALID=99;
 
 	protected volatile UDPSocket socket;
 	
@@ -45,7 +47,7 @@ public abstract class UDPSession {
 
 	protected int flowWindowSize=1024;
 
-	protected final Destination destination;
+	protected final Destination dest;
 	
 	protected int localPort;
 	
@@ -57,13 +59,12 @@ public abstract class UDPSession {
 	protected int initialSequenceNumber;
 	
 	
-	public UDPSession(String description, Destination destination){
-		this.destination=destination;
-		this.dgPacket=new DatagramPacket(new byte[0],0,destination.getAddress(),destination.getPort());
+	public UDPSession(Destination peer){
+		this.dest = peer;
+		this.dgPacket=new DatagramPacket(new byte[0],0,peer.getAddress(),peer.getPort());
 	}
 	
-	
-	public abstract void received(Segment packet, Destination peer);
+	public abstract void received(Segment packet);
 	
 	//获得接受缓存大小，这个值以后可以根据网络状态自动调整
 	private int receiverBufferSize = 10;
@@ -105,11 +106,7 @@ public abstract class UDPSession {
 	}
 	
 	public boolean isShutdown(){
-		return state==SHUTDOWN || state==invalid;
-	}
-	
-	public Destination getDestination() {
-		return destination;
+		return state==SHUTDOWN || state==INVALID;
 	}
 	
 	public int getDatagramSize() {

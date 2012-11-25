@@ -10,7 +10,7 @@ import com.hd123.auction.seg.DATSegment;
 
 public class UDPSocket {
 	
-	private final UDPEndPoint endpoint;
+	private final ServerSocketImpl impl;
 	
 	private volatile boolean active;
 	
@@ -22,11 +22,11 @@ public class UDPSocket {
 	private UDPInputStream inputStream;
 	private UDPOutputStream outputStream;
 
-	public UDPSocket(UDPEndPoint endpoint, UDPSession session)throws SocketException,UnknownHostException{
-		this.endpoint=endpoint;
+	public UDPSocket(ServerSocketImpl impl, UDPSession session)throws SocketException,UnknownHostException{
+		this.impl=impl;
 		this.session=session;
-		this.receiver=new UDPReceiver(session,endpoint);
-		this.sender=new UDPSender(session,endpoint);
+		this.receiver=new UDPReceiver(session,impl);
+		this.sender=new UDPSender(session,impl);
 	}
 
 	public void doWrite(byte[] data) throws IOException{
@@ -76,8 +76,8 @@ public class UDPSocket {
 		return active;
 	}
 
-	public UDPEndPoint getEndpoint() {
-		return endpoint;
+	public ServerSocketImpl getEndpoint() {
+		return impl;
 	}
 	
 	public final UDPSession getSession(){

@@ -15,88 +15,41 @@ public class ServerSession extends UDPSession {
 
 	private static final Logger logger=Logger.getLogger(ServerSession.class.getName());
 
-	private final UDPEndPoint endPoint;
+	private final ServerSocketImpl impl;
 
-	//last received packet (for testing purposes)
-	private Segment lastPacket;
-
-	public ServerSession(DatagramPacket dp, UDPEndPoint endPoint)throws SocketException,UnknownHostException{
-		super("ServerSession localPort="+endPoint.getLocalPort()+" peer="+dp.getAddress()+":"+dp.getPort(),new Destination(dp.getAddress(),dp.getPort()));
-		this.endPoint=endPoint;
-		logger.info("Created "+toString()+" talking to "+dp.getAddress()+":"+dp.getPort());
+	public ServerSession(ServerSocketImpl impl, Destination peer) throws SocketException,UnknownHostException{
+		super(peer);
+		this.impl=impl;
 	}
 
-	int n_handshake=0;
-
 	@Override
-	public void received(Segment packet, Destination peer){
-		lastPacket=packet;
-
+	public void received(Segment packet){
 		if(packet instanceof SYNSegment) {
 			SYNSegment syn=(SYNSegment)packet;
 			logger.info("Received :"+syn);
 
 			if (getState()<=READY){
-
 				if(getState()<=HANDSHARKING){
 					setState(HANDSHARKING);
 				}
 				try{
 					handleHandShake(syn);
-					n_handshake++;
 					try{
 						setState(READY);
-						socket=new UDPSocket(endPoint, this);
+						socket=new UDPSocket(impl, this);
 					}catch(Exception e){
 						logger.log(Level.SEVERE,"",e);
-						setState(invalid);
+						setState(INVALID);
 					}
 				}catch(IOException ex){
-					//session invalid
 					logger.log(Level.WARNING,"Error processing ConnectionHandshake",ex);
-					setState(invalid);
+					setState(INVALID);
 				}
 				return;
 			}
-
 		}
-//		else if(packet instanceof KeepAlive) {
-//			socket.getReceiver().resetEXPTimer();
-//			active = true;
-//			return;
-//		}
-
-		if(getState()== READY) {
-			active = true;
-
-//			if (packet instanceof KeepAlive) {
-//				//nothing to do here
-//				return;
-//			}else if (packet instanceof Shutdown) {
-//				try{
-//					socket.getReceiver().stop();
-//				}catch(IOException ex){
-//					logger.log(Level.WARNING,"",ex);
-//				}
-//				setState(shutdown);
-//				System.out.println("SHUTDOWN ***");
-//				active = false;
-//				logger.info("Connection shutdown initiated by the other side.");
-//				return;
-			}
-
-			else{
-				try{
-//						socket.getSender().receive(packet);
-//						socket.getReceiver().receive(packet);	
-				}catch(Exception ex){
-					//session invalid
-					logger.log(Level.SEVERE,"",ex);
-					setState(invalid);
-				}
-			}
+		if(getState()== READY)
 			return;
-
 	}
 
 	Segment getLastPacket(){
@@ -105,8 +58,9 @@ public class ServerSession extends UDPSession {
 	protected void handleHandShake(Segment handshake)throws IOException{
 		SYNSegment syn = new SYNSegment();
 		logger.info("Sending reply "+syn);
-		endPoint.doSend(syn);
+		impl.doSend(syn);
 	}
+
 
 
 

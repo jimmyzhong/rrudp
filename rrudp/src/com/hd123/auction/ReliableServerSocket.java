@@ -3,47 +3,36 @@ package com.hd123.auction;
 import java.net.InetAddress;
 import java.net.SocketException;
 import java.net.UnknownHostException;
+import java.util.Map;
 import java.util.logging.Logger;
 
 public class ReliableServerSocket {
 	
 	private static final Logger logger=Logger.getLogger(ReliableSocket.class.getName());
-	private final UDPEndPoint endpoint;
 	private boolean started=false;
 	private volatile boolean shutdown=false;
 	
-	public ReliableServerSocket(InetAddress localAddress, int port)throws SocketException,UnknownHostException{
-		endpoint=new UDPEndPoint(localAddress,port);
-		logger.info("Created server endpoint on port "+endpoint.getLocalPort());
-	}
-
-	public ReliableServerSocket(int port) throws SocketException,UnknownHostException{
-		this(InetAddress.getLocalHost(),port);
+	private ServerSocketImpl impl;
+	
+	public ReliableServerSocket(String host, int port) throws SocketException,UnknownHostException{
+		impl=new ServerSocketImpl(host,port);
+		logger.info("Created server endpoint on port "+impl.getLocalPort());
 	}
 	
-	public ReliableServerSocket(String ip,int port) throws SocketException,UnknownHostException{
-		this(InetAddress.getByName(ip),port);
-	}
-	
-	public synchronized UDPSocket accept() throws InterruptedException{
+	public synchronized ReliableSocket accept() throws InterruptedException{
 		if(!started){
-			endpoint.start(true);//启动服务端
 			started=true;
 		}
 		while(!shutdown){
 //			UDTSession session=endpoint.accept(10000, TimeUnit.MILLISECONDS);
-			UDPSession session=endpoint.accept();
-			return session.getSocket();
+			return impl.accept();
 		}
 		throw new InterruptedException();
 	} 
 	
 	public void shutDown(){
 		shutdown=true;
-		endpoint.stop();
+		impl.stop();
 	}
 	
-	public UDPEndPoint getEndpoint(){
-		return endpoint;
-	}
 }
