@@ -8,72 +8,98 @@ import java.net.InetAddress;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
-import java.util.Collection;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.SynchronousQueue;
-import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import com.hd123.auction.seg.DATSegment;
 import com.hd123.auction.seg.SYNSegment;
 import com.hd123.auction.seg.Segment;
-import com.hd123.auction.util.UDTThreadFactory;
+import com.hd123.auction.util.UDPThreadFactory;
 
 public class ClientSocketImpl {
 
 	private static final Logger logger=Logger.getLogger(ClientSocketImpl.class.getName());
 
 	private final int port;
-
+	private volatile boolean stopped=false;
 	private final DatagramSocket dgSocket;
-	private UDPSession session;
+	private ClientSession session;
 	
-	final DatagramPacket dp= new DatagramPacket(new byte[DATAGRAM_SIZE],DATAGRAM_SIZE);
+	private DatagramPacket dp= new DatagramPacket(new byte[DATAGRAM_SIZE],DATAGRAM_SIZE);
 	
 	public static final int DATAGRAM_SIZE=1400;
 
 	public ClientSocketImpl(String host, int port)throws SocketException, UnknownHostException{
 		dgSocket=new DatagramSocket(port,InetAddress.getByName(host));
+		dp= new DatagramPacket(new byte[DATAGRAM_SIZE],DATAGRAM_SIZE,InetAddress.getByName(host),port);
 		this.port = port;
+	}
+	
+	public void start(){
+		Runnable receive=new Runnable(){
+			public void run(){
+				try{
+					doReceive();
+				}catch(Exception ex){
+					logger.log(Level.WARNING,"",ex);
+				}
+			}
+		};
+		Thread t=UDPThreadFactory.get().newThread(receive);
+		t.setDaemon(true);
+		t.start();
+		logger.info("ClientSocketImpl started.");
+	}
+	
+	protected void doReceive() throws IOException{
+		while(!stopped){
+			try{
+					dgSocket.receive(dp);
+					Destination peer=new Destination(dp.getAddress(), dp.getPort());
+					Segment seg = Segment.parse(dp.getData());
+					if(seg instanceof DATSegment){
+						session.received(seg);
+					}
+					if(seg instanceof SYNSegment){
+						session.received(seg);
+					}
+			}catch(Exception ex){
+				logger.log(Level.WARNING, "Got: "+ex.getMessage(),ex);
+			}
+		}
 	}
 
 	public void stop(){
+		stopped = true;
 		dgSocket.close();
 	}
 	
-	public void setSession(UDPSession session){
+	public void setSession(ClientSession session){
 		this.session = session;
 	}
 
 	public void connect(String remote, int port) throws InterruptedException, UnknownHostException, IOException{
 		int n=0;
-		while(session.getState()!=UDPSession.READY){
+		while(true){
 			//发送握手协议同步包
 			sendHandShake();
-			if(session.getState()==UDPSession.INVALID)
-				throw new IOException("Can't connect!");
 			n++;
-			if(session.getState()!=UDPSession.READY)
-				Thread.sleep(500);
+			if(session.getState()!=UDPSession.ESTABLISHED)
+				Thread.sleep(5000);
+			if(session.getState()==UDPSession.ESTABLISHED)
+				break;
+			if(n == 8)
+				throw new RuntimeException("time out");
 		}
-//		cc.init();
 		logger.info("Connected, "+n+" handshake packets sent");		
 	}
 	
-	//handshake for connect
+	//发送握手协议
 		protected void sendHandShake()throws IOException{
-			SYNSegment syn = new SYNSegment(0);
+			logger.info("first sendHandShake");		
+			session.setState(UDPSession.SYN_SENT);
+			SYNSegment syn = new SYNSegment(session.getSequence());
 			syn.setSession(session);
-			doSend(syn);
-		}
-
-		//2nd handshake for connect
-		protected void sendConfirmation(SYNSegment hs)throws IOException{
-			SYNSegment syn = new SYNSegment();
-			syn.setSession(session);
-			logger.info("Sending confirmation "+syn);
 			doSend(syn);
 		}
 		
@@ -102,6 +128,6 @@ public class ClientSocketImpl {
 	}
 
 	public String toString(){
-		return  "UDPEndpoint port="+port;
+		return  "ClientSocketImpl port="+port;
 	}
 }

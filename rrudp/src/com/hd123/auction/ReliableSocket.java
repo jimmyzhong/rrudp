@@ -1,51 +1,42 @@
 package com.hd123.auction;
 
 import java.io.IOException;
-import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
 import java.net.UnknownHostException;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class ReliableSocket {
 
-	private static final Logger logger = Logger.getLogger(ReliableSocket.class
-			.getName());
+	private static final Logger logger = Logger.getLogger(ReliableSocket.class.getName());
 
 	private ClientSocketImpl sockImpl;
-	private UDPSession session;
+	private ClientSession session;
 	private boolean isClientMode = true;
 	private String localHost;
 	private int localPort;
 	private String remoteHost;
 	private int remotePort;
 
-	public ReliableSocket() {
-	}
-
-	public ReliableSocket(String host, int port) throws SocketException,
-			UnknownHostException {
+	public ReliableSocket(String host, int port) throws SocketException, UnknownHostException {
 		localHost = host;
 		localPort = port;
 		logger.info("Created client endpoint on port " + port);
 	}
 
-	public ReliableSocket(UDPSession session) throws SocketException,
-			UnknownHostException {
+	public ReliableSocket(ClientSession session) throws SocketException, UnknownHostException {
 		this.session = session;
 	}
 
-	public void connect(String host, int port) throws InterruptedException,
-			UnknownHostException, IOException {
+	public void connect(String host, int port) throws InterruptedException, UnknownHostException, IOException {
 		remoteHost = host;
 		remotePort = port;
 		InetAddress address = InetAddress.getByName(host);
 		// 服务器地址
 		Destination destination = new Destination(address, port);
 
-		sockImpl = new ClientSocketImpl(host, port);
-		session = new ClientSession(new DatagramSocket(port,address), destination);
+		sockImpl = new ClientSocketImpl(localHost, localPort);
+		session = new ClientSession(sockImpl.getSocket(), destination);
 		sockImpl.setSession(session);
 
 		sockImpl.connect(host, port);
@@ -58,18 +49,24 @@ public class ReliableSocket {
 	}
 
 	public void shutdown() throws IOException {
-
-		session.getSocket().getReceiver().stop();
-		session.getSocket().getSender().stop();
+		session.getSocket().stop();
 		if (sockImpl != null)
 			sockImpl.stop();
 	}
 
 	public UDPInputStream getInputStream() throws IOException {
+		if (session == null)
+			throw new IOException("session is null");
+		if (session.getSocket() == null)
+			throw new IOException("socket is null");
 		return session.getSocket().getInputStream();
 	}
 
 	public UDPOutputStream getOutputStream() throws IOException {
+		if (session == null)
+			throw new IOException("session is null");
+		if (session.getSocket() == null)
+			throw new IOException("socket is null");
 		return session.getSocket().getOutputStream();
 	}
 

@@ -3,15 +3,15 @@ package com.hd123.auction.util;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class UDTThreadFactory implements ThreadFactory {
+public class UDPThreadFactory implements ThreadFactory {
 
 	private static final AtomicInteger num=new AtomicInteger(0);
 	
-	private static UDTThreadFactory theInstance=null;
+	private static UDPThreadFactory theInstance=null;
 	
-	public static synchronized UDTThreadFactory get(){
+	public static synchronized UDPThreadFactory get(){
 		if(theInstance==null)
-			theInstance=new UDTThreadFactory();
+			theInstance=new UDPThreadFactory();
 		return theInstance;
 	}
 	

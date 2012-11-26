@@ -18,7 +18,7 @@ public class ClientTest {
 	 */
 	public static void main(String[] args) throws InterruptedException, IOException {
 		String localHost = "192.168.111.1";
-		int localPort = 6000;
+		int localPort = 6008;
 		String serverHost = "192.168.111.1";
 		int serverPort = 6001;
 		String fileName = "d:\\receivefile";

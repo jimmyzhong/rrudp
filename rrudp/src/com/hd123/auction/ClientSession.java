@@ -23,73 +23,66 @@ public class ClientSession extends UDPSession {
 	public ClientSession(DatagramSocket dgSocket, Destination dest)throws SocketException{
 		super(dest);
 		this.dgSocket=dgSocket;
+		//每个目的地址独有的数据包缓冲区
 		dgPacket = new DatagramPacket(new byte[DATAGRAM_SIZE],DATAGRAM_SIZE,dest.getAddress(),dest.getPort());
 	}
 	
 	@Override
 	public void received(Segment packet) {
-		//服务端响应的同步包
+		//响应的同步包
 		if (packet instanceof SYNSegment) {
 			SYNSegment syn=(SYNSegment)packet;
-
+			if(getState() == SYN_SENT){
+				try{
+					//发送第二次同步包 可靠
+					sendConfirmation(syn);
+					setState(ESTABLISHED);
+				}catch(Exception ex){
+					logger.log(Level.WARNING,"Error creating socket",ex);
+					setState(INVALID);
+				}
+			}
+			else if(getState() == CLOSED){
+				try{
+					//服务器发送第一次同步包 非可靠
+					sendHandShake();
+					setState(SYN_SENT);
+				}catch(Exception ex){
+					logger.log(Level.WARNING,"Error creating socket",ex);
+					setState(INVALID);
+				}
+			}
 			logger.info("Received connection handshake from "+dest+"\n"+syn);
+			logger.info("Received :"+syn);
+		}//end of syn
 
-			if (getState()!=READY) {
-					try{
-						//TODO 验证目的地址是否是当前session的地址
-						//发送第二次同步包
-						sendConfirmation(syn);
-					}catch(Exception ex){
-						logger.log(Level.WARNING,"Error creating socket",ex);
-						setState(INVALID);
-					}
-					return;
-			}
-		}
-
-		if(getState() == READY) {
-
-//			if(packet instanceof Shutdown){
-//				setState(shutdown);
-//				active=false;
-//				logger.info("Connection shutdown initiated by the other side.");
-//				return;
-//			}
-			active = true;
-			try{
-//					socket.getSender().receive(lastPacket);
-//					socket.getReceiver().receive(lastPacket);	
-			}catch(Exception ex){
-				logger.log(Level.SEVERE,"Error in "+toString(),ex);
-				setState(INVALID);
-			}
+		if(getState() == ESTABLISHED) {
+			//判断关闭
 			return;
 		}
+		socket.received(packet);
 	}
 
-
-	//handshake for connect
-	protected void sendHandShake()throws IOException{
+	//第一次握手
+	protected void sendHandShake() throws IOException{
 		SYNSegment syn = new SYNSegment(0);
 		syn.setSession(this);
 		doSend(syn);
 	}
 
-	//2nd handshake for connect
-	protected void sendConfirmation(SYNSegment hs)throws IOException{
-		SYNSegment syn = new SYNSegment();
+	//客户端的二次确认
+	protected void sendConfirmation(SYNSegment syn) throws IOException{
 		syn.setSession(this);
 		logger.info("Sending confirmation "+syn);
 		doSend(syn);
 	}
 	
 	//发送数据包
-		protected void doSend(Segment packet) throws IOException{
+	protected void doSend(Segment packet) throws IOException{
 			byte[] data=packet.getBytes();
 			DatagramPacket dgp = packet.getSession().getDatagram();
 			dgp.setData(data);
 			dgSocket.send(dgp);
-		}
-
+	}
 
 }

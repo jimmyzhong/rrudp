@@ -1,77 +1,88 @@
 package com.hd123.auction;
 
-import java.io.IOException;
 import java.net.DatagramPacket;
-import java.net.UnknownHostException;
-import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Logger;
 
 import com.hd123.auction.seg.Segment;
 
-
 public abstract class UDPSession {
 
-	private static final Logger logger=Logger.getLogger(UDPSession.class.getName());
+	private static final Logger logger = Logger.getLogger(UDPSession.class
+			.getName());
 
 	protected int mode;
 	protected volatile boolean active;
-	private volatile int state=START;
+	private volatile int state = CLOSED;
 	protected volatile Segment lastPacket;
-	
-	public static final int START=0;
-	public static final int HANDSHARKING=1;
-	public static final int READY=2;
-	public static final int KEEPLIVE=3;
-	public static final int SHUTDOWN=4;
-	
-	public static final int INVALID=99;
 
-	protected volatile UDPSocket socket;
-	
-	protected int receiveBufferSize=64*32768;
-	
+	public static final int SYN_SENT = 1;
+	public static final int SYN_RECEIVE = 2;
+	public static final int ESTABLISHED = 3;
+
+	public static final int INVALID = 99;
+	public static final int CLOSED = 0;
+
+	protected UDPSocket socket;
+
+	protected int receiveBufferSize = 64 * 32768;
+
+	// 序列号 最大值
 	protected int sequenceSize = 0xff;
-	
+
 	public int getSequenceSize() {
 		return sequenceSize;
 	}
-
 
 	public void setSequenceSize(int sequenceSize) {
 		this.sequenceSize = sequenceSize;
 	}
 
+	// 序列号
+	protected AtomicInteger sequence = new AtomicInteger(0);
+
+	public int getSequence() {
+		if (sequence == null)
+			sequence = new AtomicInteger(initialSequenceNumber);
+		return sequence.get();
+	}
+
+	public void setSequence(int sequence) {
+		this.sequence.set(sequence);
+	}
+
+	public int incrementSequenceAndGet() {
+		for (;;) {
+			int current = getSequence();
+			int next = current == sequenceSize ? 0 : current + 1;
+			if (sequence.compareAndSet(current, next))
+				return current;
+		}
+	}
+
 	private DatagramPacket dgPacket;
 
-	protected int flowWindowSize=1024;
-
 	protected final Destination dest;
-	
-	protected int localPort;
-	
-	
-	public static final int DEFAULT_DATAGRAM_SIZE=1024*4;
-	
-	protected int datagramSize=DEFAULT_DATAGRAM_SIZE;
-	
-	protected int initialSequenceNumber;
-	
-	
-	public UDPSession(Destination peer){
-		this.dest = peer;
-		this.dgPacket=new DatagramPacket(new byte[0],0,peer.getAddress(),peer.getPort());
+
+	public static final int DEFAULT_DATAGRAM_SIZE = 1024 * 4;
+
+	protected int datagramSize = DEFAULT_DATAGRAM_SIZE;
+
+	private int initialSequenceNumber;
+
+	public UDPSession(Destination dest) {
+		this.dest = dest;
+		this.dgPacket = new DatagramPacket(new byte[0], 0, dest.getAddress(),
+				dest.getPort());
 	}
-	
-	public abstract void received(Segment packet);
-	
-	//获得接受缓存大小，这个值以后可以根据网络状态自动调整
+
+	// 获得接受缓存大小，这个值以后可以根据网络状态自动调整
 	private int receiverBufferSize = 10;
-	public int getReceiverBufferSize(){
+
+	public int getReceiverBufferSize() {
 		return receiverBufferSize;
 	}
-	
+
 	public UDPSocket getSocket() {
 		return socket;
 	}
@@ -89,12 +100,12 @@ public abstract class UDPSession {
 	}
 
 	public void setState(int state) {
-		logger.info(toString()+" connection state CHANGED to <"+state+">");
+		logger.info(toString() + " connection state CHANGED to <" + state + ">");
 		this.state = state;
 	}
-	
-	public boolean isReady(){
-		return state==READY;
+
+	public boolean isReady() {
+		return state == ESTABLISHED;
 	}
 
 	public boolean isActive() {
@@ -104,11 +115,11 @@ public abstract class UDPSession {
 	public void setActive(boolean active) {
 		this.active = active;
 	}
-	
-	public boolean isShutdown(){
-		return state==SHUTDOWN || state==INVALID;
+
+	public boolean isShutdown() {
+		return state == CLOSED || state == INVALID;
 	}
-	
+
 	public int getDatagramSize() {
 		return datagramSize;
 	}
@@ -116,7 +127,7 @@ public abstract class UDPSession {
 	public void setDatagramSize(int datagramSize) {
 		this.datagramSize = datagramSize;
 	}
-	
+
 	public int getReceiveBufferSize() {
 		return receiveBufferSize;
 	}
@@ -125,32 +136,24 @@ public abstract class UDPSession {
 		this.receiveBufferSize = bufferSize;
 	}
 
-	public int getFlowWindowSize() {
-		return flowWindowSize;
-	}
-
-	public void setFlowWindowSize(int flowWindowSize) {
-		this.flowWindowSize = flowWindowSize;
-	}
-
-	public synchronized int getInitialSequenceNumber(){
+	public synchronized int getInitialSequenceNumber() {
 		return initialSequenceNumber;
 	}
-	
-	public synchronized void setInitialSequenceNumber(int initialSequenceNumber){
-		this.initialSequenceNumber=initialSequenceNumber;
+
+	public synchronized void setInitialSequenceNumber(int initialSequenceNumber) {
+		this.initialSequenceNumber = initialSequenceNumber;
 	}
 
-	public DatagramPacket getDatagram(){
+	public DatagramPacket getDatagram() {
 		return dgPacket;
 	}
-	
-	public String toString(){
-		StringBuilder sb=new StringBuilder();
+
+	public String toString() {
+		StringBuilder sb = new StringBuilder();
 		sb.append(super.toString());
 		sb.append(" [");
 		sb.append(" ]");
 		return sb.toString();
 	}
-	
+
 }

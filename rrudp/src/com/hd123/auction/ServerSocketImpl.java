@@ -1,4 +1,3 @@
-
 package com.hd123.auction;
 
 import java.io.IOException;
@@ -19,125 +18,133 @@ import java.util.logging.Logger;
 import com.hd123.auction.seg.DATSegment;
 import com.hd123.auction.seg.SYNSegment;
 import com.hd123.auction.seg.Segment;
-import com.hd123.auction.util.UDTThreadFactory;
+import com.hd123.auction.util.UDPThreadFactory;
 
 public class ServerSocketImpl {
 
-	private static final Logger logger=Logger.getLogger(ServerSocketImpl.class.getName());
+	private static final Logger logger = Logger.getLogger(ServerSocketImpl.class.getName());
 
 	private final int port;
 
-	//一个服务器对应一个socket
+	// 一个服务器对应一个socket
 	private final DatagramSocket dgSocket;
-	final DatagramPacket dp= new DatagramPacket(new byte[DATAGRAM_SIZE],DATAGRAM_SIZE);
+	final DatagramPacket dp = new DatagramPacket(new byte[DATAGRAM_SIZE], DATAGRAM_SIZE);
 
-	private final Map<Destination,ClientDef> clients = new ConcurrentHashMap<Destination, ClientDef>();
+	private final Map<Destination, ClientDef> clients = new ConcurrentHashMap<Destination, ClientDef>();
 
-	private final SynchronousQueue<ReliableSocket> sessionHandoff=new SynchronousQueue<ReliableSocket>();
-	
-	private volatile boolean stopped=false;
+	private final SynchronousQueue<ReliableSocket> sessionHandoff = new SynchronousQueue<ReliableSocket>();
 
-	public static final int DATAGRAM_SIZE=1400;
+	private volatile boolean stopped = false;
 
-	public ServerSocketImpl(String localHost, int localPort)throws SocketException, UnknownHostException{
-		dgSocket=new DatagramSocket(localPort,InetAddress.getByName(localHost));
+	public static final int DATAGRAM_SIZE = 1400;
+
+	public ServerSocketImpl(String localHost, int localPort) throws SocketException, UnknownHostException {
+		dgSocket = new DatagramSocket(localPort, InetAddress.getByName(localHost));
 		this.port = localPort;
+		start();
 	}
 
-	public void start(){
-		Runnable receive=new Runnable(){
-			public void run(){
-				try{
+	public void start() {
+		Runnable receive = new Runnable() {
+			public void run() {
+				try {
 					doReceive();
-				}catch(Exception ex){
-					logger.log(Level.WARNING,"",ex);
+				} catch (Exception ex) {
+					logger.log(Level.WARNING, "", ex);
 				}
 			}
 		};
-		Thread t=UDTThreadFactory.get().newThread(receive);
+		Thread t = UDPThreadFactory.get().newThread(receive);
 		t.setDaemon(true);
 		t.start();
 		logger.info("UDTEndpoint started.");
 	}
 
-	public void stop(){
-		stopped=true;
+	public void stop() {
+		stopped = true;
 		dgSocket.close();
 	}
-	
-	public void addClient(Destination dest, ClientDef client){
-		logger.info("adding client <"+dest+">");
+
+	public void addClient(Destination dest, ClientDef client) {
+		logger.info("adding client <" + dest + ">");
 		clients.put(dest, client);
 	}
 
-	protected ReliableSocket accept() throws InterruptedException{
+	public ClientDef getClient(Destination dest) {
+		return clients.get(dest);
+	}
+
+	protected ReliableSocket accept() throws InterruptedException {
 		return sessionHandoff.take();
 	}
-	
-	protected ReliableSocket accept(long timeout, TimeUnit unit)throws InterruptedException{
+
+	protected ReliableSocket accept(long timeout, TimeUnit unit) throws InterruptedException {
 		return sessionHandoff.poll(timeout, unit);
 	}
-	
-	protected void doReceive() throws IOException{
-		while(!stopped){
-			try{
-				try{
+
+	protected void doReceive() throws IOException {
+		while (!stopped) {
+			try {
+				try {
 					dgSocket.receive(dp);
-					Destination peer=new Destination(dp.getAddress(), dp.getPort());
+					Destination peer = new Destination(dp.getAddress(), dp.getPort());
 					Segment seg = Segment.parse(dp.getData());
-					if(seg instanceof DATSegment){
+					if (seg instanceof DATSegment) {
 						ClientDef client = clients.get(peer);
-						if(client == null)
+						if (client == null)
 							continue;
 						client.getSession().received(seg);
 					}
-					if(seg instanceof SYNSegment){
-						ClientDef client = new ClientDef();
-						ReliableSocket clientSocket = new ReliableSocket();
-						client.setSocket(clientSocket);
-						UDPSession session = new ClientSession(dgSocket,peer);
-						client.setSession(session);
-						addClient(peer, client);
-						sessionHandoff.put(clientSocket);
-						session.received(seg);
+					if (seg instanceof SYNSegment) {
+						ClientDef clientDef = getClient(peer);
+						if (clientDef == null) {
+							ClientDef client = new ClientDef();
+							ClientSession session = new ClientSession(dgSocket, peer);
+							client.setSession(session);
+							ReliableSocket clientSocket = new ReliableSocket(session);
+							client.setSocket(clientSocket);
+							addClient(peer, client);
+							sessionHandoff.put(clientSocket);
+							session.received(seg);
+						}
 					}
-				}catch(SocketException ex){
-					logger.log(Level.INFO, "SocketException: "+ex.getMessage());
-				}catch(SocketTimeoutException ste){
+				} catch (SocketException ex) {
+					logger.log(Level.INFO, "SocketException: " + ex.getMessage());
+				} catch (SocketTimeoutException ste) {
 					//
 				}
 
-			}catch(Exception ex){
-				logger.log(Level.WARNING, "Got: "+ex.getMessage(),ex);
+			} catch (Exception ex) {
+				logger.log(Level.WARNING, "Got: " + ex.getMessage(), ex);
 			}
 		}
 	}
 
-	//发送数据包
-	protected void doSend(Segment packet) throws IOException{
-		byte[] data=packet.getBytes();
+	// 发送数据包
+	protected void doSend(Segment packet) throws IOException {
+		byte[] data = packet.getBytes();
 		DatagramPacket dgp = packet.getSession().getDatagram();
 		dgp.setData(data);
 		dgSocket.send(dgp);
 	}
 
-	public void sendRaw(DatagramPacket p)throws IOException{
+	public void sendRaw(DatagramPacket p) throws IOException {
 		dgSocket.send(p);
 	}
-	
+
 	public int getLocalPort() {
 		return this.dgSocket.getLocalPort();
 	}
 
-	public InetAddress getLocalAddress(){
+	public InetAddress getLocalAddress() {
 		return this.dgSocket.getLocalAddress();
 	}
 
-	protected DatagramSocket getSocket(){
+	protected DatagramSocket getSocket() {
 		return dgSocket;
 	}
 
-	public String toString(){
-		return  "UDPEndpoint port="+port;
+	public String toString() {
+		return "UDPEndpoint port=" + port;
 	}
 }
