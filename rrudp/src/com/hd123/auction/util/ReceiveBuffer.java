@@ -10,7 +10,7 @@ public class ReceiveBuffer {
 
 	private final AppData[] buffer;
 
-	private volatile int readPosition = 0;
+	private volatile int readPosition = -1;
 
 	private int startSequenceNumber;
 	private final AtomicInteger numValidChunks = new AtomicInteger(0);
@@ -19,14 +19,16 @@ public class ReceiveBuffer {
 	private final Condition fullCondition;
 	private final ReentrantLock lock;
 
-	// the size of the buffer
 	private final int size;
 	private final int sequenceSize;
 
-	public ReceiveBuffer(int size, int sequenceSize, int initialSequenceNumber) {
+	/**
+	 * @param size  缓冲区大小
+	 * @param sequenceSize 序列号大小
+	 */
+	public ReceiveBuffer(int size, int sequenceSize) {
 		this.size = size;
 		this.sequenceSize = sequenceSize;
-		this.startSequenceNumber = initialSequenceNumber;
 		this.buffer = new AppData[size];
 
 		lock = new ReentrantLock(false);
@@ -59,6 +61,8 @@ public class ReceiveBuffer {
 	public AppData poll() {
 		lock.lock();
 		try {
+			if(readPosition == -1)
+				throw new RuntimeException("readPosition  not set");
 			while (numValidChunks.get() == 0) {
 				emptyCondition.await();
 			}
@@ -66,7 +70,9 @@ public class ReceiveBuffer {
 			while (r == null) {
 				emptyCondition.await();
 			}
-			increment();
+			buffer[readPosition] = null;
+			readPosition = (readPosition + 1) % size;
+			numValidChunks.decrementAndGet();
 			startSequenceNumber = (startSequenceNumber + 1) % sequenceSize;
 			fullCondition.signal();
 			return r;
@@ -75,19 +81,11 @@ public class ReceiveBuffer {
 		} finally {
 			lock.unlock();
 		}
-		return null;
+		throw new RuntimeException("should not run here");
 	}
 
 	public int getSize() {
 		return size;
-	}
-
-	void increment() {
-		buffer[readPosition] = null;
-		readPosition++;
-		if (readPosition == size)
-			readPosition = 0;
-		numValidChunks.decrementAndGet();
 	}
 
 	public AppData[] getBuffer() {
@@ -96,6 +94,11 @@ public class ReceiveBuffer {
 
 	public boolean isEmpty() {
 		return numValidChunks.get() == 0;
+	}
+
+	public void setInitialDataSequenceNumber(int i) {
+		startSequenceNumber = i;
+		readPosition = i;
 	}
 
 }

@@ -33,7 +33,7 @@ public class ReceiverBufferTest {
 	}
 	public static void main(String[] args) {
 		ReceiverBufferTest test = new ReceiverBufferTest();
-		test.buf = new ReceiveBuffer(10, 80, 0);
+		test.buf = new ReceiveBuffer(10, 80);
 		OfferThread off = test.new OfferThread();
 		PollThread pull = test.new PollThread();
 		LookThread look = test.new LookThread();

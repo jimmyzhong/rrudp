@@ -9,10 +9,6 @@ public class UDPOutputStream{
 		this.socket=socket;	
 	}
 	
-	public void write(int args)throws IOException{
-		write(new byte[]{(byte)args});
-	}
-
 	public void write(byte[] b) throws IOException {
 		socket.doWrite(b);
 	}

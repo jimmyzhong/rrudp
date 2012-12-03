@@ -8,13 +8,13 @@ import com.hd123.auction.ReliableServerSocket;
 import com.hd123.auction.ReliableSocket;
 import com.hd123.auction.UDPOutputStream;
 
-public class ServerTest {
+public class ServerTest2 {
 
 	public static void main(String[] args) throws InterruptedException,
 			IOException {
-		String serverHost = "192.168.111.10";
-		int serverPort = 7000;
-		String fileName = "c:\\sendfile.txt";
+		String serverHost = "192.168.111.1";
+		int serverPort = 6001;
+		String fileName = "d:\\senderfile";
 
 		ReliableServerSocket socket = new ReliableServerSocket(serverHost,
 				serverPort);

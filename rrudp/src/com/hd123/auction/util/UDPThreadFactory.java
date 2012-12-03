@@ -17,7 +17,7 @@ public class UDPThreadFactory implements ThreadFactory {
 	
 	public Thread newThread(Runnable r) {
 		Thread t=new Thread(r);
-		t.setName("UDT-Thread-"+num.incrementAndGet());
+		t.setName("RRUDP-Thread-"+num.incrementAndGet());
 		return t;
 	}
 

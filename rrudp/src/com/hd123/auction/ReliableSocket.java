@@ -37,13 +37,13 @@ public class ReliableSocket {
 
 		sockImpl = new ClientSocketImpl(localHost, localPort);
 		session = new ClientSession(sockImpl.getSocket(), destination);
+		UDPSocket socket = new UDPSocket(session);
+		session.setSocket(socket);
+		socket.start();
 		sockImpl.setSession(session);
-
+		sockImpl.start();
 		sockImpl.connect(host, port);
 
-		while (!session.isReady()) {
-			Thread.sleep(500);
-		}
 		logger.info("The UDPClient is connected");
 		Thread.sleep(500);
 	}

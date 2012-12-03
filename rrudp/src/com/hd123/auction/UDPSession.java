@@ -4,17 +4,13 @@ import java.net.DatagramPacket;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Logger;
 
-import com.hd123.auction.seg.Segment;
-
 public abstract class UDPSession {
 
-	private static final Logger logger = Logger.getLogger(UDPSession.class
-			.getName());
+	private static final Logger logger = Logger.getLogger(UDPSession.class.getName());
 
 	protected int mode;
 	protected volatile boolean active;
 	private volatile int state = CLOSED;
-	protected volatile Segment lastPacket;
 
 	public static final int SYN_SENT = 1;
 	public static final int SYN_RECEIVE = 2;
@@ -23,9 +19,7 @@ public abstract class UDPSession {
 	public static final int INVALID = 99;
 	public static final int CLOSED = 0;
 
-	protected UDPSocket socket;
-
-	protected int receiveBufferSize = 64 * 32768;
+	public Object connectedSyn = new Object();
 
 	// 序列号 最大值
 	protected int sequenceSize = 0xff;
@@ -72,19 +66,14 @@ public abstract class UDPSession {
 
 	public UDPSession(Destination dest) {
 		this.dest = dest;
-		this.dgPacket = new DatagramPacket(new byte[0], 0, dest.getAddress(),
-				dest.getPort());
+		this.dgPacket = new DatagramPacket(new byte[0], 0, dest.getAddress(), dest.getPort());
 	}
 
 	// 获得接受缓存大小，这个值以后可以根据网络状态自动调整
-	private int receiverBufferSize = 10;
+	private int receiverBufferSize = 8;
 
 	public int getReceiverBufferSize() {
 		return receiverBufferSize;
-	}
-
-	public UDPSocket getSocket() {
-		return socket;
 	}
 
 	public int getState() {
@@ -95,9 +84,7 @@ public abstract class UDPSession {
 		this.mode = mode;
 	}
 
-	public void setSocket(UDPSocket socket) {
-		this.socket = socket;
-	}
+	
 
 	public void setState(int state) {
 		logger.info(toString() + " connection state CHANGED to <" + state + ">");
@@ -126,14 +113,6 @@ public abstract class UDPSession {
 
 	public void setDatagramSize(int datagramSize) {
 		this.datagramSize = datagramSize;
-	}
-
-	public int getReceiveBufferSize() {
-		return receiveBufferSize;
-	}
-
-	public void setReceiveBufferSize(int bufferSize) {
-		this.receiveBufferSize = bufferSize;
 	}
 
 	public synchronized int getInitialSequenceNumber() {

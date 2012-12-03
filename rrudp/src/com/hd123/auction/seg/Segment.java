@@ -79,10 +79,10 @@ public abstract class Segment
 
     
 
-    public static Segment parse(byte[] bytes)
-    {
-        return Segment.parse(bytes, 0, bytes.length);
-    }
+//    public static Segment parse(byte[] bytes)
+//    {
+//        return Segment.parse(bytes, 0, bytes.length);
+//    }
 
     public static Segment parse(byte[] bytes, int off, int len)
     {

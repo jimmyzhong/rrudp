@@ -4,13 +4,13 @@ public class ClientDef {
 
 	private ReliableSocket socket;
 
-	private UDPSession session;
+	private ClientSession session;
 	
-	public UDPSession getSession() {
+	public ClientSession getSession() {
 		return session;
 	}
 
-	public void setSession(UDPSession session) {
+	public void setSession(ClientSession session) {
 		this.session = session;
 	}
 

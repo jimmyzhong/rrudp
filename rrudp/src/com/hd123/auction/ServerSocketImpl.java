@@ -15,6 +15,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import com.hd123.auction.seg.ACKSegment;
 import com.hd123.auction.seg.DATSegment;
 import com.hd123.auction.seg.SYNSegment;
 import com.hd123.auction.seg.Segment;
@@ -39,6 +40,7 @@ public class ServerSocketImpl {
 	public static final int DATAGRAM_SIZE = 1400;
 
 	public ServerSocketImpl(String localHost, int localPort) throws SocketException, UnknownHostException {
+		logger.info("bind to address:" + localHost + "  port:" + localPort);
 		dgSocket = new DatagramSocket(localPort, InetAddress.getByName(localHost));
 		this.port = localPort;
 		start();
@@ -88,11 +90,25 @@ public class ServerSocketImpl {
 				try {
 					dgSocket.receive(dp);
 					Destination peer = new Destination(dp.getAddress(), dp.getPort());
-					Segment seg = Segment.parse(dp.getData());
+					Segment seg = Segment.parse(dp.getData(),0,dp.getLength());
 					if (seg instanceof DATSegment) {
 						ClientDef client = clients.get(peer);
 						if (client == null)
 							continue;
+						client.getSession().received(seg);
+					}
+					if(seg instanceof ACKSegment){
+						ClientDef client = clients.get(peer);
+						if (client == null)
+							continue;
+						ClientSession session = client.getSession();
+						if(session.getState() == UDPSession.SYN_RECEIVE)
+						{
+							session.setState(UDPSession.ESTABLISHED);
+							synchronized (session.connectedSyn) {
+								session.connectedSyn.notify();
+							}
+						}
 						client.getSession().received(seg);
 					}
 					if (seg instanceof SYNSegment) {
@@ -100,6 +116,9 @@ public class ServerSocketImpl {
 						if (clientDef == null) {
 							ClientDef client = new ClientDef();
 							ClientSession session = new ClientSession(dgSocket, peer);
+							UDPSocket socket = new UDPSocket(session);
+							session.setSocket(socket);
+							socket.start();
 							client.setSession(session);
 							ReliableSocket clientSocket = new ReliableSocket(session);
 							client.setSocket(clientSocket);

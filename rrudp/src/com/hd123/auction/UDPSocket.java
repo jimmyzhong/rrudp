@@ -6,6 +6,7 @@ import java.net.UnknownHostException;
 
 import com.hd123.auction.seg.DATSegment;
 import com.hd123.auction.seg.Segment;
+import com.hd123.auction.util.ReceiveBuffer;
 
 public class UDPSocket {
 
@@ -18,21 +19,22 @@ public class UDPSocket {
 
 	private UDPInputStream inputStream;
 	private UDPOutputStream outputStream;
+	
+	private volatile ReceiveBuffer receiverBuffer;
 
 	public UDPSocket(ClientSession session) throws SocketException,
 			UnknownHostException {
 		this.session = session;
-		this.receiver = new UDPReceiver(session);
+		this.receiverBuffer = new ReceiveBuffer(session.getReceiverBufferSize(), session.getSequenceSize());
+		this.receiver = new UDPReceiver(session,receiverBuffer);
 		this.sender = new UDPSender(session);
 	}
 
 	// 用户发送数据 通过InputStream入口
 	public void doWrite(byte[] data) throws IOException {
-		DATSegment packet = new DATSegment();
-		int seqNo = session.incrementSequenceAndGet();
-		packet.seq(seqNo);
+		int next = receiver.getLastSegmentSeq();
+		DATSegment packet = new DATSegment(session.incrementSequenceAndGet(),next,data);
 		packet.setSession(session);
-		packet.setData(data);
 		try {
 			sender.sendUDPPacket(packet);
 		} catch (InterruptedException e) {
@@ -70,6 +72,11 @@ public class UDPSocket {
 		return session;
 	}
 
+	public void start() {
+		receiver.start();
+		sender.start();
+	}
+	
 	public void stop() {
 		receiver.stop();
 		sender.stop();
@@ -85,6 +92,14 @@ public class UDPSocket {
 			e.printStackTrace();
 		}
 
+	}
+
+	public ReceiveBuffer getReceiverBuffer() {
+		return receiverBuffer;
+	}
+
+	public void setInitialDataSequenceNumber(int i) {
+		receiverBuffer.setInitialDataSequenceNumber(i);
 	}
 
 }

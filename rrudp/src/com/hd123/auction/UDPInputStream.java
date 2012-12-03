@@ -2,48 +2,41 @@ package com.hd123.auction;
 
 import java.io.IOException;
 
-import com.hd123.auction.util.ReceiveBuffer;
+import com.hd123.auction.seg.Segment;
 
 public class UDPInputStream {
 
 	private final UDPSocket socket;
 
-	private final ReceiveBuffer receiveBuffer;
-
 	private volatile boolean closed = false;
 
 	public UDPInputStream(UDPSocket socket) throws IOException {
 		this.socket = socket;
-		int capacity =  128;
-		int initialSequenceNum = socket.getSession().getInitialSequenceNumber();
-		receiveBuffer = new ReceiveBuffer(capacity, socket.getSession()
-				.getSequenceSize(), initialSequenceNum);
 	}
-
 
 	public byte[] read() throws IOException {
-		try {
-			AppData data = receiveBuffer.poll();
-			return data.getData();
-		} catch (Exception ex) {
-			IOException e = new IOException();
-			e.initCause(ex);
-			throw e;
-		}
+		AppData data = socket.getReceiverBuffer().poll();
+		byte[] src = data.getData();
+		int length = src.length - Segment.RUDP_HEADER_LEN;
+		byte[] dest = new byte[length];
+		System.arraycopy(src, Segment.RUDP_HEADER_LEN, dest, 0, length);
+		return dest;
 	}
 
-	protected boolean haveNewData(int seq, byte[] data) throws IOException {
-		return receiveBuffer.offer(new AppData(seq, data));
+	public int read(byte[] dest) throws IOException {
+		if (dest == null)
+			throw new NullPointerException("dest is null");
+		AppData data = socket.getReceiverBuffer().poll();
+		byte[] src = data.getData();
+		int length = src.length - Segment.RUDP_HEADER_LEN;
+		System.arraycopy(src, Segment.RUDP_HEADER_LEN, dest, 0, length);
+		return length;
 	}
 
 	public void close() throws IOException {
 		if (closed)
 			return;
 		closed = true;
-	}
-
-	public int getReceiveBufferSize() {
-		return receiveBuffer.getSize();
 	}
 
 	public static class AppData implements Comparable<AppData> {
@@ -75,8 +68,7 @@ public class UDPInputStream {
 		public int hashCode() {
 			final int prime = 31;
 			int result = 1;
-			result = prime * result
-					+ (int) (sequenceNumber ^ (sequenceNumber >>> 32));
+			result = prime * result + (int) (sequenceNumber ^ (sequenceNumber >>> 32));
 			return result;
 		}
 

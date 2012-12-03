@@ -10,6 +10,7 @@ import java.util.logging.Logger;
 
 import com.hd123.auction.UDPInputStream.AppData;
 import com.hd123.auction.seg.ACKSegment;
+import com.hd123.auction.seg.DATSegment;
 import com.hd123.auction.seg.Segment;
 import com.hd123.auction.util.ReceiveBuffer;
 import com.hd123.auction.util.UDPThreadFactory;
@@ -23,19 +24,18 @@ public class UDPReceiver {
 	private final List lostList = new LinkedList();
 	private ReceiveBuffer receiverBuffer;
 	private final BlockingQueue<Segment> handoffQueue;
-
+	private int lastSegmentSeq;
 	private Thread receiverThread;
 
 	private volatile boolean stopped = false;
 
-	public UDPReceiver(ClientSession session) {
+	public UDPReceiver(ClientSession session,ReceiveBuffer receiverBuffer) {
 		this.session = session;
-		receiverBuffer = new ReceiveBuffer(8, session.getSequenceSize(), session.getInitialSequenceNumber());
-		handoffQueue = new ArrayBlockingQueue<Segment>(18);
-		start();
+		this.receiverBuffer = receiverBuffer;
+		handoffQueue = new ArrayBlockingQueue<Segment>(1000);
 	}
 
-	private void start() {
+	public void start() {
 		Runnable r = new Runnable() {
 			public void run() {
 				try {
@@ -57,17 +57,27 @@ public class UDPReceiver {
 	}
 
 	public void receiverAlgorithm() throws InterruptedException, IOException {
-		Segment packet = handoffQueue.poll();
-		if (packet != null) {
-			processUDTPacket(packet);
-		}
-		Thread.yield();
+		Segment packet = handoffQueue.take();// blocking
+		processUDPPacket(packet);
 	}
 
-	protected void processUDTPacket(Segment p) throws IOException {
-		AppData data = new AppData(p.seq(), p.getBytes());
-		receiverBuffer.offer(data);
-		sendAcknowledgment(p.seq());
+	protected void processUDPPacket(Segment p) throws IOException {
+		//服务端收到确认包 且当时状态是SYN_RECEIVE 则设置状态为 ESTABLISHED
+		if(session.getState() == UDPSession.SYN_RECEIVE && p instanceof ACKSegment){
+			try{
+				session.setState(UDPSession.ESTABLISHED);
+			}catch(Exception ex){
+				logger.log(Level.WARNING,"Error creating socket",ex);
+				session.setState(UDPSession.INVALID);
+			}
+		}
+		if(p instanceof DATSegment)
+		{
+			AppData data = new AppData(p.seq(), p.getBytes());
+			receiverBuffer.offer(data);
+			lastSegmentSeq = p.seq();
+			sendAcknowledgment(p.seq());
+		}
 	}
 
 	protected void sendAcknowledgment(int currentSequenceNumber) throws IOException {
@@ -80,6 +90,8 @@ public class UDPReceiver {
 	}
 
 	public void stop() {
+		if(stopped)
+			return;
 		stopped = true;
 	}
 
@@ -88,6 +100,14 @@ public class UDPReceiver {
 		sb.append("UDPReceiver ").append(session).append("\n");
 		sb.append("LossList: " + lostList);
 		return sb.toString();
+	}
+
+	public int getLastSegmentSeq() {
+		return lastSegmentSeq;
+	}
+
+	public ReceiveBuffer getReceiverBuffer() {
+		return receiverBuffer;
 	}
 
 }
